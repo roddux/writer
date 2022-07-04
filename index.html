@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+
+<!--
+TODO
+- use .add/remove classes for animations instead of .style.border stuff
+- stop being lazy and tidy the JS
+-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Writer</title>
+    <style type="text/css">
+        body {
+            margin: 40px auto;
+            max-width: 700px;
+            line-height: 1.6;
+            font-size: 18px;
+            color: #313131;
+            padding:0 10px;
+        }
+        h1, h2, h3 {
+            line-height:1.2
+        }
+        textarea {
+            width: 100%;
+            height: 20em;
+            padding: 10px;
+            margin: 0 0 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            transition: 500ms;
+        }
+        button {
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 100%;
+            line-height: 2;
+        }
+    </style>
+    <script>
+        var editor = save_btn = prior = posts = null;
+        function onLoad() {
+            if (editor == null) { editor = document.getElementById("editor"); }
+            if (save_btn == null) { save_btn = document.getElementById("save_btn"); }
+            if (prior == null) { prior = document.getElementById("prior"); }
+            listPosts();
+        }
+        function act() {
+            var copy = btoa(editor.value);
+            fetch("/save?data="+copy);
+            prev_style = editor.style.border;
+            editor.style.border = "1px solid #ffc002";
+            editor.value = save_btn.innerText="Saving...";
+            editor.disabled = true;
+            save_btn.disabled = true;
+            setTimeout(function() {
+                editor.value="";
+                editor.placeholder=save_btn.innerText="Saved!";
+                editor.disabled = false;
+                save_btn.disabled = false;
+                editor.style.border = "1px solid green";
+            }, 1000);
+            setTimeout(function() {
+                editor.placeholder="Write here";
+                editor.style.border = prev_style;
+                save_btn.innerText="Save";
+                listPosts();
+            }, 2000);
+        }
+        function loadPost(post_title) {
+            editor.value = atob(posts[post_title]);
+            editor.onclick = function() {
+                editor.placeholder = editor.value;
+                editor.value = "";
+            };
+        }
+        async function listPosts() {
+            var data = await (await fetch("/list")).json();
+            posts = data["posts"];
+            while(prior.hasChildNodes()) { prior.removeChild(prior.firstChild); }
+            for (title in posts) {
+                new_post = document.createElement("li");
+                new_post_link = document.createElement("a");
+                new_post_link.innerText = title;
+                new_post_link.href = `javascript:loadPost("${title}");`;
+                new_post.appendChild(new_post_link);
+                prior.appendChild( new_post );
+            }
+        }
+        window.onload = onLoad;
+    </script>
+</head>
+
+<body>
+    <header>
+        <h1>Writer</h1>
+    </header>
+    <textarea id="editor" placeholder="Write here"></textarea>
+    <button id="save_btn" onclick=act()>Save</button>
+    <h2>Previously</h2>
+    <ul id="prior"></ul>
+</body>
+
+</html>
